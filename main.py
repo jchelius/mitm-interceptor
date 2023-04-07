@@ -18,10 +18,9 @@ def main():
     add_proc_to_cgroup(cgroup_dir)
     # set the netfilter rules
     set_nf_rules(cgroup_id)
-    # create interceptor1.py
-    create_interceptor_py(token, 'FAKE_CIPHERTEXT')
     # start the mitmproxy
-    cmd_str = 'sudo -u mitmproxyuser -H bash -c \"\$HOME/.local/bin/mitmdump --mode transparent --showhost --set block_global=false -s interceptor1.py\"'
+    fake_ciphertext = 'FAKE_CIPHERTEXT'
+    cmd_str = f'sudo -u mitmproxyuser -H bash -c \"\$HOME/.local/bin/mitmdump --mode transparent --showhost --set block_global=false --modify-body /~q/{token}/{fake_ciphertext}\"'
     subprocess.run(cmd_str, shell=True)
     
     send_all_msgs(rand_msgs)
@@ -47,16 +46,6 @@ def set_nf_rules(cgroup_id):
     cmds = [f'sudo iptables -t nat -A OUTPUT -p tcp -m cgroup --cgroup {cgroup_id} -m owner ! --uid-owner mitmproxyuser --dport 80 -j REDIRECT --to-port 8080', f'sudo iptables -t nat -A OUTPUT -p tcp -m cgroup --cgroup {cgroup_id} -m owner ! --uid-owner mitmproxyuser --dport 443 -j REDIRECT --to-port 8080', f'sudo ip6tables -t nat -A OUTPUT -p tcp -m cgroup --cgroup {cgroup_id} -m owner ! --uid-owner mitmproxyuser --dport 80 -j REDIRECT --to-port 8080',f'sudo ip6tables -t nat -A OUTPUT -p tcp -m cgroup --cgroup {cgroup_id} -m owner ! --uid-owner mitmproxyuser --dport 443 -j REDIRECT --to-port 8080']
     for cmd in cmds:
         subprocess.run(cmd, shell=True)
-
-def create_interceptor_py(token, fake_ciphertext):  
-    interceptor_py_txt = f'''from mitmproxy import ctx, http
-def request(flow):
-    if \'{token}\' in flow.request.text:
-        flow.request.text = flow.request.text.replace(\'{token}\', \'{fake_ciphertext}\')
-        print(\"Modified http request: \" + flow.request.text)
-        '''
-    with open('interceptor1.py', 'w') as f:
-        f.write(interceptor_py_txt)
 
 def send_all_msgs(msgs):
     HOST = 'byu.edu'
