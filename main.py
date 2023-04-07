@@ -20,7 +20,7 @@ def main():
     set_nf_rules(cgroup_id)
     # start the mitmproxy
     fake_ciphertext = 'FAKE_CIPHERTEXT'
-    cmd_str = f'sudo -u mitmproxyuser -H bash -c \"\$HOME/.local/bin/mitmdump --mode transparent --showhost --set block_global=false --modify-body /~q/{token}/{fake_ciphertext}\"'
+    cmd_str = f'sudo -u mitmproxyuser -H bash -c \"\$HOME/.local/bin/mitmdump --mode transparent --set block_global=false --quiet --modify-body /~q/{token}/{fake_ciphertext}\"'
     subprocess.run(cmd_str, shell=True)
     
     send_all_msgs(rand_msgs)
