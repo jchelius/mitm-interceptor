@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import random
 import string
 import socket
@@ -6,7 +8,7 @@ import os
 
 def main():
     TOKEN_LEN = 20
-    token = rand_str(TOKEN_LEN)
+    token = 'seids\{test_message\}seide'
     rand_msgs = gen_rand_msgs(20,token)
 
     # create the cgroups directory
@@ -19,9 +21,11 @@ def main():
     # set the netfilter rules
     set_nf_rules(cgroup_id)
     # start the mitmproxy
-    fake_ciphertext = 'FAKE_CIPHERTEXT'
-    cmd_str = f'sudo -u mitmproxyuser -H bash -c \"\$HOME/.local/bin/mitmdump --mode transparent --set block_global=false --quiet --modify-body /~q/{token}/{fake_ciphertext}\"'
-    subprocess.run(cmd_str, shell=True)
+    fake_ciphertext = 'seids\{test_message_metadata\}seide'
+    create_interceptor_py(token, fake_ciphertext)
+    cmd_str = f'sudo -u mitmproxyuser -H bash -c \"\$HOME/.local/bin/mitmdump --mode transparent --set block_global=false --quiet -s interceptor.py"'
+    f = open('mitmdump_out', 'w')
+    subprocess.run(cmd_str, shell=True, stdout=f)
     
     send_all_msgs(rand_msgs)
     # print(rand_msgs)
@@ -46,6 +50,27 @@ def set_nf_rules(cgroup_id):
     cmds = [f'sudo iptables -t nat -A OUTPUT -p tcp -m cgroup --cgroup {cgroup_id} -m owner ! --uid-owner mitmproxyuser --dport 80 -j REDIRECT --to-port 8080', f'sudo iptables -t nat -A OUTPUT -p tcp -m cgroup --cgroup {cgroup_id} -m owner ! --uid-owner mitmproxyuser --dport 443 -j REDIRECT --to-port 8080', f'sudo ip6tables -t nat -A OUTPUT -p tcp -m cgroup --cgroup {cgroup_id} -m owner ! --uid-owner mitmproxyuser --dport 80 -j REDIRECT --to-port 8080',f'sudo ip6tables -t nat -A OUTPUT -p tcp -m cgroup --cgroup {cgroup_id} -m owner ! --uid-owner mitmproxyuser --dport 443 -j REDIRECT --to-port 8080']
     for cmd in cmds:
         subprocess.run(cmd, shell=True)
+
+def create_interceptor_py(token, ciphertext):
+
+    content = '''import logging
+import re
+
+from mitmproxy import ctx
+from mitmproxy import exceptions
+
+class ModifyBody:
+    def request(self, flow):
+        if flow.response or flow.error or not flow.live:
+            return
+        if not flow.request:
+            return
+        start_time = time.time()\n''' + \
+        '''        flow.request.content = re.sub(\'{token}\', \'{ciphertext}\', flow.request.content)\n'''.format(token = token, ciphertext = ciphertext) + \
+        '''        logging.info(\'finished processing request\')
+        logging.info(f\'time to process request: \{time.time() - start_time\}s\')'''
+    with open('interceptor.py', 'w') as f:
+        f.write(content)
 
 def send_all_msgs(msgs):
     HOST = 'byu.edu'
