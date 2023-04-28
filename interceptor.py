@@ -14,3 +14,4 @@ class ModifyBody:
         flow.request.content = re.sub('seids\{test_message\}seide', 'seids\{test_message_metadata\}seide', flow.request.content)
         logging.info('finished processing request')
         logging.info(f'time to process request: \{time.time() - start_time\}s')
+addons = [ModifyBody()]

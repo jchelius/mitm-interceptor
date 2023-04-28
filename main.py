@@ -68,7 +68,8 @@ class ModifyBody:
         start_time = time.time()\n''' + \
         '''        flow.request.content = re.sub(\'{token}\', \'{ciphertext}\', flow.request.content)\n'''.format(token = token, ciphertext = ciphertext) + \
         '''        logging.info(\'finished processing request\')
-        logging.info(f\'time to process request: \{time.time() - start_time\}s\')'''
+        logging.info(f\'time to process request: \{time.time() - start_time\}s\')
+addons = [ModifyBody()]'''
     with open('interceptor.py', 'w') as f:
         f.write(content)
 
