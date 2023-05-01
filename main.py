@@ -5,6 +5,7 @@ import string
 import socket
 import subprocess
 import os
+from time import sleep
 
 def main():
     TOKEN_LEN = 20
@@ -23,11 +24,17 @@ def main():
     # start the mitmproxy
     fake_ciphertext = 'seids\{test_message_metadata\}seide'
     create_interceptor_py(token, fake_ciphertext)
-    cmd_str = f'sudo -u mitmproxyuser -H bash -c \"\$HOME/.local/bin/mitmdump --mode transparent --set block_global=false --quiet -s interceptor.py"'
-    f = open('mitmdump_out', 'w')
-    subprocess.run(cmd_str, shell=True, stdout=f)
-    
+    # cmd_str = f'sudo -u mitmproxyuser -H bash -c \"\$HOME/.local/bin/mitmdump --mode transparent --set block_global=false --quiet -s interceptor.py"'
+    # f = open('mitmdump_out', 'w')
+    # p = subprocess.Popen(cmd_str, shell=True, stdout=f)
+    # poll = p.poll()
+    # if poll is None:
+    #    print('mitmdump is running')
+    # else:
+    #     print('mitmdump stopped')
+    #     print(p.communicate())
     send_all_msgs(rand_msgs)
+    # f.close()
     # print(rand_msgs)
 
 def create_cgroups_dir(cgroup_net_cls_dir, cgroup_name, cgroup_id):
@@ -59,7 +66,7 @@ import re
 from mitmproxy import ctx
 from mitmproxy import exceptions
 
-class ModifyBody:
+class ModifyBodyAndLog:
     def request(self, flow):
         if flow.response or flow.error or not flow.live:
             return
@@ -68,8 +75,8 @@ class ModifyBody:
         start_time = time.time()\n''' + \
         '''        flow.request.content = re.sub(\'{token}\', \'{ciphertext}\', flow.request.content)\n'''.format(token = token, ciphertext = ciphertext) + \
         '''        logging.info(\'finished processing request\')
-        logging.info(f\'time to process request: \{time.time() - start_time\}s\')
-addons = [ModifyBody()]'''
+        logging.info(f\'time to process request: {time.time() - start_time}s\')
+addons = [ModifyBodyAndLog()]\n'''
     with open('interceptor.py', 'w') as f:
         f.write(content)
 
